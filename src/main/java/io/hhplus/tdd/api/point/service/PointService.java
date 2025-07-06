@@ -29,19 +29,19 @@ public class PointService {
     }
 
 
-    public UserPoint getUserPoint(long id) {
+    public UserPoint getUserPoint(long userId) {
+        return userPointTable.selectById(userId);
+    }
+
+    public List<PointHistory> getPointHistory(long userId) {
+        return pointHistoryTable.selectAllByUserId(userId);
+    }
+
+    public UserPoint chargePoint(long userId, long amount) {
         return null;
     }
 
-    public List<PointHistory> getPointHistory(long id) {
-        return null;
-    }
-
-    public UserPoint chargePoint(long id, long amount) {
-        return null;
-    }
-
-    public UserPoint usePoint(long id, long amount) {
+    public UserPoint usePoint(long userId, long amount) {
         return null;
     }
 
