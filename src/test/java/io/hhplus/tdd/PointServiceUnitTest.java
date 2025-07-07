@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-public class PointServiceUnitTest {
+class PointServiceUnitTest {
 
     @Mock
     private UserPointTable userPointTable;
