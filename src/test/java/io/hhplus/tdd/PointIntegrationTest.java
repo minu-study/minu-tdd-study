@@ -48,5 +48,19 @@ class PointIntegrationTest {
                 .andExpect(jsonPath("$.point").value(1000L));
     }
 
+    @Test
+    @DisplayName("사용자의 포인트 내역을 조회한다.")
+    void getPointHistory() throws Exception {
+        mockMvc.perform(get("/point/{id}/histories", 1L))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userId").value(1L))
+                .andExpect(jsonPath("$[0].amount").value(1000L))
+                .andExpect(jsonPath("$[0].type").value(TransactionType.CHARGE.name()))
+                .andExpect(jsonPath("$[1].userId").value(1L))
+                .andExpect(jsonPath("$[1].amount").value(500L))
+                .andExpect(jsonPath("$[1].type").value(TransactionType.USE.name()));
+    }
+
 
 }
