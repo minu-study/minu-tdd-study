@@ -38,11 +38,58 @@ public class PointService {
     }
 
     public UserPoint chargePoint(long userId, long amount) {
-        return null;
+
+        if (amount < 0) {
+            throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
+        }
+
+        Lock lock = getLock(userId);
+        lock.lock();
+
+        try {
+            UserPoint currentPoint = userPointTable.selectById(userId);
+            UserPoint updatedPoint = userPointTable.insertOrUpdate(userId, currentPoint.point() + amount);
+
+            pointHistoryTable.insert(
+                    userId,
+                    amount,
+                    TransactionType.CHARGE,
+                    System.currentTimeMillis()
+            );
+            return updatedPoint;
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     public UserPoint usePoint(long userId, long amount) {
-        return null;
+
+        if (amount < 0) {
+            throw new IllegalArgumentException("사용 포인트는 0보다 커야 합니다.");
+        }
+
+        Lock lock = getLock(userId);
+        lock.lock();
+
+        try {
+            UserPoint currentPoint = userPointTable.selectById(userId);
+            if (currentPoint.point() < amount) {
+                throw new IllegalArgumentException("포인트가 부족합니다.");
+            }
+            UserPoint updatedPoint = userPointTable.insertOrUpdate(userId, currentPoint.point() - amount);
+
+            pointHistoryTable.insert(
+                    userId,
+                    amount,
+                    TransactionType.USE,
+                    System.currentTimeMillis()
+            );
+            return updatedPoint;
+        } finally {
+            lock.unlock();
+        }
+
     }
 
 }
