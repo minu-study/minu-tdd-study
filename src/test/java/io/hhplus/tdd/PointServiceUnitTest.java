@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -74,6 +75,13 @@ public class PointServiceUnitTest {
         verify(pointHistoryTable).insert(eq(userId), eq(chargeAmount), eq(TransactionType.CHARGE), anyLong());
     }
 
+    @Test
+    @DisplayName("0 이하의 금액으로 충전할 수 없다")
+    void chargeNegativeAmount() {
+        assertThatThrownBy(() -> pointService.chargePoint(1L, 0L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("충전 금액은 0보다 커야 합니다.");
+    }
 
 
 }
