@@ -84,4 +84,52 @@ public class PointServiceUnitTest {
     }
 
 
+    @Test
+    @DisplayName("포인트를 사용한다")
+    void usePoint() {
+
+        // given
+        long userId = 1L;
+        long beforeAmount = 1000L;
+        long useAmount = 400L;
+        UserPoint beforePoint = new UserPoint(userId, beforeAmount, System.currentTimeMillis());
+        UserPoint afterPoint = new UserPoint(userId, beforeAmount - useAmount, System.currentTimeMillis());
+        given(userPointTable.selectById(userId)).willReturn(beforePoint);
+        given(userPointTable.insertOrUpdate(userId, beforeAmount - useAmount)).willReturn(afterPoint);
+
+        // when
+        UserPoint userPoint = pointService.usePoint(userId, useAmount);
+
+        // then
+        assertThat(userPoint.point()).isEqualTo(beforeAmount - useAmount);
+        verify(userPointTable).selectById(userId);
+        verify(userPointTable).insertOrUpdate(userId, beforeAmount - useAmount);
+        verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.USE), anyLong());
+    }
+
+    @Test
+    @DisplayName("0 이하의 포인트로 사용할 수 없다")
+    void useNegativeAmount() {
+        assertThatThrownBy(() -> pointService.usePoint(1L, 0L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("사용 포인트는 0보다 커야 합니다.");
+    }
+
+    @Test
+    @DisplayName("보유 포인트가 부족할 때 포인트를 사용할 수 없다")
+    void insufficientAmount() {
+        // given
+        long userId = 1L;
+        long beforeAmount = 100L;
+        long useAmount = 200L;
+        UserPoint beforePoint = new UserPoint(userId, beforeAmount, System.currentTimeMillis());
+        given(userPointTable.selectById(userId)).willReturn(beforePoint);
+
+        // when & then
+        assertThatThrownBy(() -> pointService.usePoint(userId, useAmount))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("포인트가 부족합니다.");
+    }
+
+
 }
