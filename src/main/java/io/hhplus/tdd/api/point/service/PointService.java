@@ -39,7 +39,7 @@ public class PointService {
 
     public UserPoint chargePoint(long userId, long amount) {
 
-        if (amount < 0) {
+        if (amount <= 0) {
             throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
         }
 
@@ -65,7 +65,7 @@ public class PointService {
 
     public UserPoint usePoint(long userId, long amount) {
 
-        if (amount < 0) {
+        if (amount <= 0) {
             throw new IllegalArgumentException("사용 포인트는 0보다 커야 합니다.");
         }
 
