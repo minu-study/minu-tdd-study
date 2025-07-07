@@ -78,6 +78,7 @@ public class PointServiceUnitTest {
     @Test
     @DisplayName("0 이하의 금액으로 충전할 수 없다")
     void chargeNegativeAmount() {
+        // when & then
         assertThatThrownBy(() -> pointService.chargePoint(1L, 0L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("충전 금액은 0보다 커야 합니다.");
@@ -110,6 +111,7 @@ public class PointServiceUnitTest {
     @Test
     @DisplayName("0 이하의 포인트로 사용할 수 없다")
     void useNegativeAmount() {
+        // when & then
         assertThatThrownBy(() -> pointService.usePoint(1L, 0L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("사용 포인트는 0보다 커야 합니다.");
