@@ -132,5 +132,49 @@ class PointConcurrencyTest {
         executor.shutdown();
     }
 
+    /**
+     * 여러 사용자가 동시에 충전 요청을 보내는 경우에 대한 검증
+     * - 5명의 사용자 각각 10개의 충전 요청을 보내 총 50,000 포인트 충전되었는지 검증
+     * - 각 사용자의 포인트 이력 기록 검증
+     */
+    @Test
+    @DisplayName("여러 사용자 동시 충전 요청 검증")
+    void multiUserConcurrencyTest() throws InterruptedException {
+        int userCount = 5;
+        int threadCount = 10;
+        long chargeAmount = 1000L;
+
+        ExecutorService executor = Executors.newFixedThreadPool(50);
+        CountDownLatch latch = new CountDownLatch(userCount * threadCount);
+
+        // 사용자별 초기화
+        for (long userId = 1; userId <= userCount; userId++) {
+            userPointTable.insertOrUpdate(userId, 0L);
+        }
+
+        // when
+        for (long userId = 1; userId <= userCount; userId++) {
+            for (int t = 0; t < threadCount; t++) {
+                long finalUserId = userId;
+                executor.submit(() -> {
+                    try {
+                        pointService.chargePoint(finalUserId, chargeAmount);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+        }
+        latch.await(50, TimeUnit.SECONDS);
+
+        // then
+        for (long userId = 1; userId <= userCount; userId++) {
+            UserPoint userPoint = userPointTable.selectById(userId);
+            assertThat(userPoint.point()).isEqualTo(threadCount * chargeAmount);
+        }
+
+        executor.shutdown();
+    }
+
 
 }
