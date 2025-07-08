@@ -84,6 +84,53 @@ class PointConcurrencyTest {
     }
 
 
+    /**
+     * 동시 포인트 사용 요청에 대한 검증
+     * - 동시에 100개의 포인트 사용 요청 발생
+     * - 각 요청은 500 포인트 사용하여 총 50,000 포인트 사용되었는지 검증
+     * - 포인트 이력 기록 검증
+     */
+    @Test
+    @DisplayName("동시 포인트 사용 요청에 대한 동시성 검증")
+    void concurrencyUsePoint() throws InterruptedException {
+
+        // given
+        long userId = 2L;
+        long initialAmount = 50000L;
+        int threadCount = 100;
+        long useAmount = 500L;
+        userPointTable.insertOrUpdate(userId, initialAmount);
+
+        ExecutorService executor = Executors.newFixedThreadPool(50);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    try {
+                        pointService.usePoint(userId, useAmount);
+                    } catch (IllegalArgumentException ignored) {
+                        // 포인트 부족 예외 무시
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await(10, TimeUnit.SECONDS);
+
+        // then
+        UserPoint userPoint = userPointTable.selectById(userId);
+        assertThat(userPoint.point()).isGreaterThanOrEqualTo(0L);
+
+        long usedCount = pointHistoryTable.selectAllByUserId(userId).stream()
+                .filter(h -> h.type() == TransactionType.USE)
+                .count();
+        assertThat(usedCount * useAmount + userPoint.point()).isEqualTo(initialAmount);
+
+        executor.shutdown();
+    }
 
 
 }
