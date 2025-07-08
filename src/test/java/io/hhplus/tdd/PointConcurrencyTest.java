@@ -1,0 +1,89 @@
+package io.hhplus.tdd;
+
+import io.hhplus.tdd.api.point.service.PointService;
+import io.hhplus.tdd.common.vo.TransactionType;
+import io.hhplus.tdd.domain.point.PointHistoryTable;
+import io.hhplus.tdd.domain.point.model.PointHistory;
+import io.hhplus.tdd.domain.user.UserPointTable;
+import io.hhplus.tdd.domain.user.model.UserPoint;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+@SpringBootTest
+class PointConcurrencyTest {
+
+    @Autowired
+    private UserPointTable userPointTable;
+
+    @Autowired
+    private PointHistoryTable pointHistoryTable;
+
+    @Autowired
+    private PointService pointService;
+
+
+    /**
+     * 동시 충전 요청에 대한 검증
+     * - 동시에 100개의 충전 요청 발생
+     * - 각 요청은 1000 포인트 충전하여 총 100,000 포인트 충전되었는지 검증
+     * - 포인트 이력 기록 검증
+     */
+    @Test
+    @DisplayName("동시 충전 요청에 대한 검증")
+    void concurrencyChargePoint() throws InterruptedException {
+        // given
+        long userId = 1L;
+        int threadCount = 100;
+        long chargeAmount = 1000L;
+        ExecutorService executor = Executors.newFixedThreadPool(50);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        // 초기 포인트 세팅
+        userPointTable.insertOrUpdate(userId, 0L);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    pointService.chargePoint(userId, chargeAmount);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await(50, TimeUnit.SECONDS);
+
+        // then
+        UserPoint userPoint = userPointTable.selectById(userId);
+        assertThat(userPoint.point()).isEqualTo(threadCount * chargeAmount);
+
+        List<PointHistory> histories = pointHistoryTable.selectAllByUserId(userId);
+        assertThat(histories.stream()
+                .filter(h -> h.type() == TransactionType.CHARGE)
+                .count()).isEqualTo(threadCount);
+
+        executor.shutdown();
+    }
+
+
+
+
+}
